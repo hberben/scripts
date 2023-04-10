@@ -10,7 +10,7 @@
 
 // @author You
 
-// @match *://www.youtube.com/*
+// @match *://*.youtube.com/*
 
 // @grant none
 
