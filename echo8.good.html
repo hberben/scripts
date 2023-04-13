@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HTTP Request Connectivity Test</title>
+  <style>
+    #results {
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+  </style>
+  <script>
+    const TEST_URL = 'https://jsonplaceholder.typicode.com/posts/1';
+
+    function addResult(text) {
+      const resultsElement = document.getElementById('results');
+      resultsElement.textContent += text + '\n';
+    }
+
+    let lastOutageTimestamp = null;
+    let connectionState = null;
+
+    function checkConnectivity() {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', TEST_URL, true);
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 400) {
+          if (lastOutageTimestamp) {
+            const backOnlineTimestamp = Date.now();
+            const outageDuration = (backOnlineTimestamp - lastOutageTimestamp) / 1000;
+            addResult(`Connection restored at ${new Date(backOnlineTimestamp).toISOString()}, outage duration: ${outageDuration.toFixed(1)} seconds`);
+            lastOutageTimestamp = null;
+            connectionState = 'up';
+          } else if (connectionState !== 'up') {
+            connectionState = 'up';
+            addResult('Connection up');
+          }
+        } else {
+          handleConnectionError();
+        }
+      };
+
+      xhr.onerror = () => {
+        handleConnectionError();
+      };
+
+      xhr.send();
+    }
+
+    function handleConnectionError() {
+      if (connectionState !== 'down') {
+        connectionState = 'down';
+        lastOutageTimestamp = Date.now();
+        addResult(`Outage detected at ${new Date(lastOutageTimestamp).toISOString()}`);
+      }
+    }
+
+    function startMonitoring(interval) {
+      checkConnectivity();
+      setInterval(checkConnectivity, interval);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      startMonitoring(5000); // Check connectivity every 5 seconds
+    });
+  </script>
+</head>
+<body>
+  <h1>HTTP Request Connectivity Test</h1>
+  <pre id="results"></pre>
+</body>
+</html>
