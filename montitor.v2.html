@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Connectivity Test</title>
+  <style>
+    #results {
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+  </style>
+  <script>
+    const TEST_URL = 'https://jsonplaceholder.typicode.com/posts/1';
+
+    function addResult(text) {
+      const resultsElement = document.getElementById('results');
+      resultsElement.textContent += text + '\n';
+    }
+
+    let lastOutageTimestamp = null;
+    let connectionState = null;
+    let checkConnectivityInterval;
+
+    function startMonitoring(interval) {
+      checkConnectivity();
+      checkConnectivityInterval = setInterval(checkConnectivity, interval);
+    }
+
+    function stopMonitoring() {
+      clearInterval(checkConnectivityInterval);
+    }
+
+    function changeMethod() {
+      stopMonitoring();
+      const method = document.getElementById('method').value;
+      if (method === 'xmlhttprequest') {
+        checkConnectivity = checkConnectivityXMLHttpRequest;
+      } else if (method === 'fetch') {
+        checkConnectivity = checkConnectivityFetch;
+      }
+      startMonitoring(1000);
+    }
+
+    // XMLHttpRequest
+    function checkConnectivityXMLHttpRequest() {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', TEST_URL, true);
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 400) {
+          handleConnectionUp();
+        } else {
+          handleConnectionDown();
+        }
+      };
+
+      xhr.onerror = () => {
+        handleConnectionDown();
+      };
+
+      xhr.send();
+    }
+
+    // Fetch API
+    function checkConnectivityFetch() {
+      fetch(TEST_URL)
+        .then(response => {
+          if (response.ok) {
+            handleConnectionUp();
+          } else {
+            handleConnectionDown();
+          }
+        })
+        .catch(error => {
+          handleConnectionDown();
+        });
+    }
+
+    function handleConnectionUp() {
+      if (lastOutageTimestamp) {
+        const backOnlineTimestamp = Date.now();
+        const outageDuration = (backOnlineTimestamp - lastOutageTimestamp) / 1000;
+        addResult(`Connection restored at ${new Date(backOnlineTimestamp).toISOString()}, outage duration: ${outageDuration.toFixed(1)} seconds`);
+        lastOutageTimestamp = null;
+        connectionState = 'up';
+      } else if (connectionState !== 'up') {
+        connectionState = 'up';
+        addResult('Connection up');
+      }
+    }
+
+    function handleConnectionDown() {
+      if (connectionState !== 'down') {
+        connectionState = 'down';
+        lastOutageTimestamp = Date.now();
+        addResult(`Outage detected at ${new Date(lastOutageTimestamp).toISOString()}`);
+      }
+    }
+
+    let checkConnectivity = checkConnectivityXMLHttpRequest;
+  </script>
+</head>
+<body>
+  <h1>HTTP Request Connectivity Test</h1>
+  <label for="method">Method:</label>
+  <select id="method" onchange="changeMethod()">
+    <option value="xmlhttprequest" selected>XMLHttpRequest</option>
+    <option value="fetch">Fetch API</option>
+  </select>
+  <pre id="results"></pre>
+  <script>
+    startMonitoring(1000);
+  </script>
+</body>
+</html>
