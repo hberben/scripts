@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connectivity Monitor</title>
+</head>
+<body>
+    <h1>Connectivity Monitor</h1>
+    <label for="method">Method:</label>
+    <select id="method">
+        <option value="xmlhttprequest">XMLHttpRequest</option>
+        <option value="fetch">Fetch API</option>
+    </select>
+    <br>
+    <label for="url">URL:</label>
+    <select id="url">
+        <option value="https://example.com">https://example.com</option>
+        <option value="https://example.org">https://example.org</option>
+    </select>
+    <div id="results"></div>
+    <script>
+        let outageStart = null;
+        let totalOutageDuration = 0;
+
+        function startMonitoring(interval) {
+            setInterval(() => {
+                const method = document.getElementById('method').value;
+                const url = document.getElementById('url').value;
+
+                if (method === 'xmlhttprequest') {
+                    checkConnectionXMLHttpRequest(url);
+                } else if (method === 'fetch') {
+                    checkConnectionFetchWithUrl(url);
+                }
+            }, interval);
+        }
+
+        function checkConnectionXMLHttpRequest(url) {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', url, true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status >= 200 && xhr.status < 400) {
+                        if (outageStart) {
+                            handleConnectionRestored();
+                        }
+                    } else {
+                        if (!outageStart) {
+                            handleOutageDetected();
+                        }
+                    }
+                }
+            };
+            xhr.send(null);
+        }
+
+        function checkConnectionFetchWithUrl(url) {
+            fetch(url, { mode: 'cors', cache: 'no-cache' })
+                .then((response) => {
+                    if (response.ok) {
+                        if (outageStart) {
+                            handleConnectionRestored();
+                        }
+                    } else {
+                        if (!outageStart) {
+                            handleOutageDetected();
+                        }
+                    }
+                })
+                .catch((error) => {
+                    if (!outageStart) {
+                        handleOutageDetected();
+                    }
+                });
+        }
+
+        function handleOutageDetected() {
+            outageStart = new Date();
+            const resultsElement = document.getElementById('results');
+            resultsElement.insertAdjacentHTML(
+                'beforeend',
+                `<p>Outage detected at ${outageStart.toISOString()}</p>`
+            );
+        }
+
+        function handleConnectionRestored() {
+            const outageEnd = new Date();
+            const outageDuration = (outageEnd - outageStart) / 1000;
+            totalOutageDuration += outageDuration;
+            outageStart = null;
+            const resultsElement = document.getElementById('results');
+            resultsElement.insertAdjacentHTML(
+                'beforeend',
+                `<p>Connection restored at ${outageEnd.toISOString()}, outage duration: ${outageDuration.toFixed(1)} seconds, total outage duration: ${totalOutageDuration.toFixed(1)} seconds</p>`
+            );
+        }
+
+        startMonitoring(1000);
+    </script>
+</body>
+</html>
