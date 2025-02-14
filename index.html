@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knitting Project Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .project {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .project-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .project-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 0;
+            padding: 5px;
+            border: 1px solid transparent;
+        }
+
+        .project-title:focus {
+            border: 1px solid #ccc;
+            outline: none;
+        }
+
+        .counter {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f8f8;
+            border-radius: 5px;
+        }
+
+        .counter-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        button.delete {
+            background-color: #ff4444;
+        }
+
+        .add-button {
+            margin: 20px 0;
+            background-color: #2196F3;
+        }
+
+        input[type="number"] {
+            width: 50px;
+            padding: 5px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Knitting Project Tracker 🧶</h1>
+    <button onclick="addNewProject()" class="add-button">New Project</button>
+    <div class="container" id="projectsContainer"></div>
+
+    <script>
+        let projects = JSON.parse(localStorage.getItem('knittingProjects')) || [];
+
+        function saveToLocalStorage() {
+            localStorage.setItem('knittingProjects', JSON.stringify(projects));
+        }
+
+        function addNewProject() {
+            const project = {
+                id: Date.now(),
+                title: 'New Project',
+                counters: []
+            };
+            projects.push(project);
+            saveToLocalStorage();
+            renderProjects();
+        }
+
+        function addCounter(projectId) {
+            const project = projects.find(p => p.id === projectId);
+            project.counters.push({
+                id: Date.now(),
+                label: 'Counter',
+                count: 0
+            });
+            saveToLocalStorage();
+            renderProjects();
+        }
+
+        function updateCount(projectId, counterId, amount) {
+            const project = projects.find(p => p.id === projectId);
+            const counter = project.counters.find(c => c.id === counterId);
+            counter.count = Math.max(0, counter.count + amount);
+            saveToLocalStorage();
+            renderProjects();
+        }
+
+        function deleteProject(projectId) {
+            projects = projects.filter(p => p.id !== projectId);
+            saveToLocalStorage();
+            renderProjects();
+        }
+
+        function deleteCounter(projectId, counterId) {
+            const project = projects.find(p => p.id === projectId);
+            project.counters = project.counters.filter(c => c.id !== counterId);
+            saveToLocalStorage();
+            renderProjects();
+        }
+
+        function updateProjectTitle(projectId, newTitle) {
+            const project = projects.find(p => p.id === projectId);
+            project.title = newTitle;
+            saveToLocalStorage();
+        }
+
+        function renderProjects() {
+            const container = document.getElementById('projectsContainer');
+            container.innerHTML = '';
+
+            projects.forEach(project => {
+                const projectEl = document.createElement('div');
+                projectEl.className = 'project';
+                projectEl.innerHTML = `
+                    <div class="project-header">
+                        <h2 class="project-title" contenteditable="true" 
+                            oninput="updateProjectTitle(${project.id}, this.textContent)">
+                            ${project.title}
+                        </h2>
+                        <button onclick="deleteProject(${project.id})" class="delete">×</button>
+                    </div>
+                    <div id="counters-${project.id}"></div>
+                    <button onclick="addCounter(${project.id})">Add Counter</button>
+                `;
+
+                const countersContainer = projectEl.querySelector(`#counters-${project.id}`);
+                project.counters.forEach(counter => {
+                    const counterEl = document.createElement('div');
+                    counterEl.className = 'counter';
+                    counterEl.innerHTML = `
+                        <div>
+                            <input type="text" value="${counter.label}" 
+                                   onchange="this.parentElement.nextElementSibling.textContent = this.value">
+                        </div>
+                        <div class="counter-controls">
+                            <button onclick="updateCount(${project.id}, ${counter.id}, -1)">-</button>
+                            <input type="number" value="${counter.count}" readonly>
+                            <button onclick="updateCount(${project.id}, ${counter.id}, 1)">+</button>
+                            <button onclick="deleteCounter(${project.id}, ${counter.id})" class="delete">×</button>
+                        </div>
+                    `;
+                    countersContainer.appendChild(counterEl);
+                });
+
+                container.appendChild(projectEl);
+            });
+        }
+
+        // Initial render
+        renderProjects();
+    </script>
+</body>
+</html>
